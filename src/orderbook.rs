@@ -23,15 +23,94 @@ impl Default for OrderBook {
 impl OrderBook {
     pub fn buy(&mut self, id: usize, mut quantity: Quantity, price: Price) -> Vec<Fill> {
         let mut fills = Vec::new();
+        for px in self.best_ask..=price {
+            self.best_ask = px;
+            let level = &mut self.levels[usize::from(px)];
+            Self::level(px, &mut quantity, &mut self.order_qty, level, &mut fills);
+            if quantity == 0 {
+                return fills;
+            }
+        }
+        self.best_bid = self.best_bid.max(price);
+        self.levels[usize::from(price)].push_back(id);
+        self.order_qty.insert(id, quantity);
         fills
     }
 
     pub fn sell(&mut self, id: usize, mut quantity: Quantity, price: Price) -> Vec<Fill> {
         let mut fills = Vec::new();
+        for px in (price..=self.best_bid).rev() {
+            self.best_bid = px;
+            let level = &mut self.levels[usize::from(px)];
+            Self::level(px, &mut quantity, &mut self.order_qty, level, &mut fills);
+            if quantity == 0 {
+                return fills;
+            }
+        }
+        self.best_ask = self.best_ask.min(price);
+        self.levels[usize::from(price)].push_back(id);
+        self.order_qty.insert(id, quantity);
         fills
     }
 
     pub fn remove(&mut self, id: usize) -> bool {
-        true
+        self.order_qty.remove(&id).is_some()
+    }
+
+    fn level(
+        price: Price,
+        qty: &mut Quantity,
+        order_qty: &mut HashMap<usize, Quantity>,
+        level: &mut VecDeque<usize>,
+        fills: &mut Vec<Fill>,
+    ) {
+        let mut i = 0;
+        for &maker_id in level.iter() {
+            match order_qty.get_mut(&maker_id) {
+                Some(maker_qty) => {
+                    if *qty >= *maker_qty {
+                        fills.push(Fill::new(maker_id, *maker_qty, price, true));
+                        *qty -= *maker_qty;
+                        order_qty.remove(&maker_id);
+                        i += 1;
+                    } else {
+                        fills.push(Fill::new(maker_id, *qty, price, false));
+                        *maker_qty -= *qty;
+                        *qty = 0;
+                        break;
+                    }
+                }
+                None => i += 1,
+            }
+        }
+        level.drain(..i);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Fill, OrderBook};
+
+    #[test]
+    fn test_add_then_remove() {
+        let mut book = OrderBook::default();
+        book.buy(0, 4, 20);
+        assert!(book.remove(0));
+        assert!(!book.remove(0));
+    }
+
+    #[test]
+    fn test_multiple_fills_with_cancel() {
+        let mut book = OrderBook::default();
+        book.sell(0, 2, 5);
+        book.sell(1, 3, 6);
+        book.sell(2, 4, 7);
+        book.remove(0);
+        let fills = book.buy(3, 6, 7);
+
+        assert_eq!(
+            fills,
+            vec![Fill::new(1, 3, 6, true), Fill::new(2, 3, 7, false)]
+        );
     }
 }

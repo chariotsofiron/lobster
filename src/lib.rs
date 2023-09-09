@@ -1,8 +1,8 @@
 mod fill;
 mod orderbook;
 
+pub use crate::orderbook::OrderBook;
 pub use fill::Fill;
-pub use orderbook::OrderBook;
 
 pub type Quantity = u32;
 pub type Price = u16;
