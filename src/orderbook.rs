@@ -21,6 +21,19 @@ impl Default for OrderBook {
 }
 
 impl OrderBook {
+    /// Returns the number of resting orders in the book.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.order_qty.len()
+    }
+
+    /// Returns `true` if the book is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.order_qty.is_empty()
+    }
+
+    /// Adds a new buy order to the order book.
     pub fn buy(&mut self, id: usize, mut quantity: Quantity, price: Price) -> Vec<Fill> {
         let mut fills = Vec::new();
         for px in self.best_ask..=price {
@@ -37,6 +50,7 @@ impl OrderBook {
         fills
     }
 
+    /// Adds a new sell order to the order book.
     pub fn sell(&mut self, id: usize, mut quantity: Quantity, price: Price) -> Vec<Fill> {
         let mut fills = Vec::new();
         for px in (price..=self.best_bid).rev() {
@@ -53,6 +67,8 @@ impl OrderBook {
         fills
     }
 
+    /// Removes an order from the order book. Returns `false` if the order was
+    /// not found.
     pub fn remove(&mut self, id: usize) -> bool {
         self.order_qty.remove(&id).is_some()
     }
@@ -89,7 +105,7 @@ impl OrderBook {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Fill, OrderBook};
+    use crate::{Fill, OrderBook, Quantity, MAX_PRICE};
 
     #[test]
     fn test_add_then_remove() {
@@ -112,5 +128,13 @@ mod tests {
             fills,
             vec![Fill::new(1, 3, 6, true), Fill::new(2, 3, 7, false)]
         );
+    }
+
+    #[test]
+    fn test_trade_max_qty() {
+        let mut book = OrderBook::default();
+        book.sell(0, Quantity::MAX, MAX_PRICE);
+        let fills = book.buy(1, Quantity::MAX, MAX_PRICE);
+        assert_eq!(fills, vec![Fill::new(0, Quantity::MAX, MAX_PRICE, true)]);
     }
 }
