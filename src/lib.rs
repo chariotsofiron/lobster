@@ -5,6 +5,7 @@ mod orderbook;
 pub use crate::orderbook::OrderBook;
 pub use fill::Fill;
 
+pub type OrderId = u64;
 pub type Quantity = u32;
-pub type Price = u16;
-pub const MAX_PRICE: Price = 100;
+pub type Price = u8;
+pub const MAX_PRICE: Price = Price::MAX;

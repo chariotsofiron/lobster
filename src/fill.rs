@@ -1,8 +1,9 @@
-use crate::{Price, Quantity};
+use crate::{OrderId, Price, Quantity};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Fill {
-    pub id: usize,
+    /// The order id of the maker.
+    pub id: OrderId,
     pub quantity: Quantity,
     pub price: Price,
     pub done: bool,
@@ -10,7 +11,7 @@ pub struct Fill {
 
 impl Fill {
     #[must_use]
-    pub const fn new(id: usize, quantity: Quantity, price: Price, done: bool) -> Self {
+    pub const fn new(id: OrderId, quantity: Quantity, price: Price, done: bool) -> Self {
         Self {
             id,
             quantity,
