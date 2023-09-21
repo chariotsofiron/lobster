@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use crate::{fill::Fill, OrderId, Price, Quantity, MAX_PRICE};
 
 pub struct OrderBook {
-    order_qty: HashMap<OrderId, Quantity>,
+    orders: HashMap<OrderId, Quantity>,
     levels: [VecDeque<OrderId>; MAX_PRICE as usize + 1],
     bid: Price,
     ask: Price,
@@ -12,7 +12,7 @@ pub struct OrderBook {
 impl Default for OrderBook {
     fn default() -> Self {
         Self {
-            order_qty: HashMap::new(),
+            orders: HashMap::new(),
             levels: std::array::from_fn(|_| VecDeque::new()),
             bid: 0,
             ask: MAX_PRICE,
@@ -24,13 +24,13 @@ impl OrderBook {
     /// Returns the number of orders in the book.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.order_qty.len()
+        self.orders.len()
     }
 
     /// Returns `true` if the book contains no orders.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.order_qty.is_empty()
+        self.orders.is_empty()
     }
 
     /// Adds a new buy order to the order book.
@@ -42,13 +42,7 @@ impl OrderBook {
         if self.bid != Price::MAX {
             while self.ask <= price {
                 let level = &mut self.levels[usize::from(self.ask)];
-                Self::level(
-                    self.ask,
-                    &mut quantity,
-                    &mut self.order_qty,
-                    level,
-                    &mut fills,
-                );
+                Self::level(self.ask, &mut quantity, &mut self.orders, level, &mut fills);
                 if quantity == 0 {
                     return fills;
                 }
@@ -60,7 +54,7 @@ impl OrderBook {
         }
         self.bid = self.bid.max(price);
         self.levels[usize::from(price)].push_back(id);
-        self.order_qty.insert(id, quantity);
+        self.orders.insert(id, quantity);
         fills
     }
 
@@ -73,13 +67,7 @@ impl OrderBook {
         if self.ask != Price::MIN {
             while price <= self.bid {
                 let level = &mut self.levels[usize::from(self.bid)];
-                Self::level(
-                    self.bid,
-                    &mut quantity,
-                    &mut self.order_qty,
-                    level,
-                    &mut fills,
-                );
+                Self::level(self.bid, &mut quantity, &mut self.orders, level, &mut fills);
                 if quantity == 0 {
                     return fills;
                 }
@@ -91,14 +79,14 @@ impl OrderBook {
         }
         self.ask = self.ask.min(price);
         self.levels[usize::from(price)].push_back(id);
-        self.order_qty.insert(id, quantity);
+        self.orders.insert(id, quantity);
         fills
     }
 
     /// Removes an order from the order book. Returns `false` if the order was
     /// not found.
     pub fn remove(&mut self, id: OrderId) -> bool {
-        self.order_qty.remove(&id).is_some()
+        self.orders.remove(&id).is_some()
     }
 
     fn level(
@@ -133,7 +121,7 @@ impl OrderBook {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Fill, OrderBook, Price, Quantity, MAX_PRICE};
+    use crate::{Fill, OrderBook, Price, Quantity};
 
     #[test]
     fn add_then_remove() {

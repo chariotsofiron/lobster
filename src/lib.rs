@@ -1,4 +1,5 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![warn(clippy::unwrap_used, clippy::expect_used)]
 mod fill;
 mod orderbook;
 

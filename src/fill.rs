@@ -6,6 +6,7 @@ pub struct Fill {
     pub id: OrderId,
     pub quantity: Quantity,
     pub price: Price,
+    /// `false` if the maker order has remaining quantity.
     pub done: bool,
 }
 
