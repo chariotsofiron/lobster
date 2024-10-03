@@ -9,6 +9,7 @@ pub struct SimpleOrder {
 
 impl SimpleOrder {
     #[must_use]
+    #[allow(dead_code)]
     pub const fn new(order_id: u64, quantity: u64, price: u64) -> Self {
         Self {
             order_id,

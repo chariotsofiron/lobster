@@ -16,7 +16,6 @@ mod vecbook;
 
 pub use fill::Fill;
 pub use order::Order;
-pub use simple_order::SimpleOrder;
 pub use vecbook::VecBook;
 
 pub trait OrderBook<OrderType: Order>: Default {

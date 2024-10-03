@@ -41,34 +41,26 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
         self.asks.iter().rev()
     }
 
-    fn buy(&mut self, mut order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
-        let asks = &mut self.asks;
-        let mut quantity = order.quantity();
-        let price = order.price();
-        let fills = std::iter::from_fn(move || match_orders(asks, &mut quantity, price));
-
-        if quantity > OrderType::Quantity::default() {
-            order.set_quantity(quantity);
-            self.bids.insert(0, order);
-            self.bids.sort_by_key(OrderType::price);
+    fn buy(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
+        FillIterator {
+            maker_orders: &mut self.asks,
+            taker_orders: &mut self.bids,
+            quantity: order.quantity(),
+            price: order.price(),
+            taker_order: Some(order),
+            taker_is_buy: true,
         }
-
-        fills
     }
 
-    fn sell(&mut self, mut order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
-        let bids = &mut self.bids;
-        let mut quantity = order.quantity();
-        let price = order.price();
-        let fills = std::iter::from_fn(move || match_orders(bids, &mut quantity, price));
-
-        if quantity > OrderType::Quantity::default() {
-            order.set_quantity(quantity);
-            self.asks.insert(0, order);
-            self.asks.sort_by_key(|order| Reverse(order.price()));
+    fn sell(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
+        FillIterator {
+            maker_orders: &mut self.bids,
+            taker_orders: &mut self.asks,
+            quantity: order.quantity(),
+            price: order.price(),
+            taker_order: Some(order),
+            taker_is_buy: false,
         }
-
-        fills
     }
 
     fn remove(&mut self, order_id: <OrderType as Order>::OrderId) -> Option<OrderType> {
@@ -82,30 +74,64 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
     }
 }
 
-fn match_orders<OrderType: Order>(
-    maker_orders: &mut Vec<OrderType>,
-    quantity: &mut OrderType::Quantity,
+pub struct FillIterator<'a, OrderType: Order> {
+    maker_orders: &'a mut Vec<OrderType>,
+    taker_orders: &'a mut Vec<OrderType>,
+    quantity: OrderType::Quantity,
     price: OrderType::Price,
-) -> Option<Fill<OrderType>> {
-    if quantity == &OrderType::Quantity::default() {
-        return None;
-    }
-    let order = maker_orders.last_mut()?;
-    if order.price() > price {
-        return None;
-    }
+    taker_order: Option<OrderType>,
+    taker_is_buy: bool,
+}
 
-    #[allow(clippy::arithmetic_side_effects)]
-    if *quantity >= order.quantity() {
-        let fill = Fill::new(order.id(), order.quantity(), order.price(), true);
-        *quantity = *quantity - order.quantity();
-        maker_orders.pop();
-        Some(fill)
-    } else {
-        let fill = Fill::new(order.id(), *quantity, order.price(), false);
-        order.set_quantity(order.quantity() - *quantity);
-        *quantity = OrderType::Quantity::default();
-        Some(fill)
+impl<'a, OrderType: Order> Iterator for FillIterator<'a, OrderType> {
+    type Item = Fill<OrderType>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.quantity == OrderType::Quantity::default() {
+            return None;
+        }
+
+        // are there any valid orders to match with?
+        let order = self.maker_orders.last_mut();
+
+        if self.taker_is_buy {
+            let nothing_left = order
+                .as_ref()
+                .map_or(true, |order| order.price() > self.price);
+            if nothing_left {
+                let mut taker_order = self.taker_order.take()?;
+                taker_order.set_quantity(self.quantity);
+                self.taker_orders.insert(0, taker_order);
+                self.taker_orders.sort_by_key(OrderType::price);
+                return None;
+            }
+        } else {
+            let nothing_left = order
+                .as_ref()
+                .map_or(true, |order| order.price() < self.price);
+            if nothing_left {
+                let mut taker_order = self.taker_order.take()?;
+                taker_order.set_quantity(self.quantity);
+                self.taker_orders.insert(0, taker_order);
+                self.taker_orders
+                    .sort_by_key(|order| Reverse(order.price()));
+                return None;
+            }
+        }
+        let order = order?;
+
+        #[allow(clippy::arithmetic_side_effects)]
+        if self.quantity >= order.quantity() {
+            let fill = Fill::new(order.id(), order.quantity(), order.price(), true);
+            self.quantity = self.quantity - order.quantity();
+            self.maker_orders.pop();
+            Some(fill)
+        } else {
+            let fill = Fill::new(order.id(), self.quantity, order.price(), false);
+            order.set_quantity(order.quantity() - self.quantity);
+            self.quantity = OrderType::Quantity::default();
+            Some(fill)
+        }
     }
 }
 
@@ -144,6 +170,19 @@ mod tests {
     }
 
     #[test]
+    fn overfill_match_with_resting() {
+        let mut book = MyBook::default();
+        book.sell(MyOrder::new(0, 2, 5)).for_each(drop);
+        let mut fills = book.buy(MyOrder::new(1, 3, 5));
+        assert_eq!(fills.next(), Some(Fill::new(0, 2, 5, true)));
+        assert_eq!(fills.next(), None);
+        drop(fills);
+        let mut fills = book.sell(MyOrder::new(2, 4, 5));
+        assert_eq!(fills.next(), Some(Fill::new(1, 1, 5, true)));
+        assert_eq!(fills.next(), None);
+    }
+
+    #[test]
     fn add_order_then_remove_twice() {
         let mut book = MyBook::default();
         let order_id = 1;
@@ -164,6 +203,16 @@ mod tests {
         book.sell(MyOrder::new(2, 4, 7)).for_each(drop);
         book.remove(0);
         let mut fills = book.buy(MyOrder::new(3, 6, 6));
+        assert_eq!(fills.next(), Some(Fill::new(1, 3, 6, true)));
+        assert_eq!(fills.next(), None);
+
+        let mut book = MyBook::default();
+        book.buy(MyOrder::new(0, 4, 5)).for_each(drop);
+        book.buy(MyOrder::new(1, 3, 6)).for_each(drop);
+        book.buy(MyOrder::new(2, 2, 7)).for_each(drop);
+        book.remove(0);
+        let mut fills = book.sell(MyOrder::new(3, 6, 6));
+        assert_eq!(fills.next(), Some(Fill::new(2, 2, 7, true)));
         assert_eq!(fills.next(), Some(Fill::new(1, 3, 6, true)));
         assert_eq!(fills.next(), None);
     }
