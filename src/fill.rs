@@ -1,18 +1,29 @@
-use crate::{OrderId, Price, Quantity};
+use crate::order::Order;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Fill {
-    /// The order id of the maker.
-    pub id: OrderId,
-    pub quantity: Quantity,
-    pub price: Price,
-    /// `false` if the maker order has remaining quantity.
+#[derive(Copy, Clone, Debug)]
+pub struct Fill<OrderType: Order> {
+    pub id: OrderType::OrderId,
+    pub quantity: OrderType::Quantity,
+    pub price: OrderType::Price,
     pub done: bool,
 }
 
-impl Fill {
-    #[must_use]
-    pub const fn new(id: OrderId, quantity: Quantity, price: Price, done: bool) -> Self {
+impl<OrderType: Order> PartialEq for Fill<OrderType> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.quantity == other.quantity
+            && self.price == other.price
+            && self.done == other.done
+    }
+}
+
+impl<OrderType: Order> Fill<OrderType> {
+    pub const fn new(
+        id: OrderType::OrderId,
+        quantity: OrderType::Quantity,
+        price: OrderType::Price,
+        done: bool,
+    ) -> Self {
         Self {
             id,
             quantity,

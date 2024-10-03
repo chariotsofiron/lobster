@@ -7,12 +7,13 @@ Some notes about the design.
 
 - Don't want to export custom Side enum that user would already have
 - Avoids a branch in the code
+- buy and sell return iterators of different types which are difficult to unify
 
 ## Why not use signed quantity to represent sells?
 
 - Code becomes more annoying to reason about
 - Panics on `Quantity::MIN.neg()`
-- What should the sign of Fill's quantity be
+- What would the sign of Fill's quantity be?
 
 ## Why not have the order book generate the order ID?
 
