@@ -79,8 +79,27 @@ pub struct FillIterator<'a, OrderType: Order> {
     taker_orders: &'a mut Vec<OrderType>,
     quantity: OrderType::Quantity,
     price: OrderType::Price,
+    // This is an option to allow us to take it out of the iterator
     taker_order: Option<OrderType>,
     taker_is_buy: bool,
+}
+
+impl<'a, OrderType: Order> FillIterator<'a, OrderType> {
+    fn put_taker_order_in_book(&mut self) {
+        // safety: taker_order is some until the last iteration
+        // this is the only place where we take it
+        #[allow(clippy::unwrap_used)]
+        let mut order = self.taker_order.take().unwrap();
+        order.set_quantity(self.quantity);
+        self.taker_orders.insert(0, order);
+
+        if self.taker_is_buy {
+            self.taker_orders.sort_by_key(OrderType::price);
+        } else {
+            self.taker_orders
+                .sort_by_key(|order| Reverse(order.price()));
+        }
+    }
 }
 
 impl<'a, OrderType: Order> Iterator for FillIterator<'a, OrderType> {
@@ -92,34 +111,23 @@ impl<'a, OrderType: Order> Iterator for FillIterator<'a, OrderType> {
         }
 
         // are there any valid orders to match with?
-        let order = self.maker_orders.last_mut();
+        let Some(order) = self.maker_orders.last_mut() else {
+            self.put_taker_order_in_book();
+            return None;
+        };
 
-        if self.taker_is_buy {
-            let nothing_left = order
-                .as_ref()
-                .map_or(true, |order| order.price() > self.price);
-            if nothing_left {
-                let mut taker_order = self.taker_order.take()?;
-                taker_order.set_quantity(self.quantity);
-                self.taker_orders.insert(0, taker_order);
-                self.taker_orders.sort_by_key(OrderType::price);
-                return None;
-            }
+        let is_taker_price_worse = if self.taker_is_buy {
+            order.price() > self.price
         } else {
-            let nothing_left = order
-                .as_ref()
-                .map_or(true, |order| order.price() < self.price);
-            if nothing_left {
-                let mut taker_order = self.taker_order.take()?;
-                taker_order.set_quantity(self.quantity);
-                self.taker_orders.insert(0, taker_order);
-                self.taker_orders
-                    .sort_by_key(|order| Reverse(order.price()));
-                return None;
-            }
-        }
-        let order = order?;
+            order.price() < self.price
+        };
 
+        if is_taker_price_worse {
+            self.put_taker_order_in_book();
+            return None;
+        }
+
+        // match with resting order
         #[allow(clippy::arithmetic_side_effects)]
         if self.quantity >= order.quantity() {
             let fill = Fill::new(order.id(), order.quantity(), order.price(), true);
