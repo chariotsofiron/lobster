@@ -156,8 +156,6 @@ mod tests {
         assert_eq!(book.remove(order_id), None);
     }
 
-
-
     #[test]
     fn multiple_fills_with_cancel() {
         let mut book = MyBook::default();

@@ -1,6 +1,7 @@
 use crate::order::Order;
 
-#[derive(Copy, Clone, Debug)]
+/// A fill represents a trade between two orders.
+#[derive(Debug, Clone, Copy)]
 pub struct Fill<OrderType: Order> {
     pub id: OrderType::OrderId,
     pub quantity: OrderType::Quantity,

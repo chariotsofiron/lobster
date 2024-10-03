@@ -15,8 +15,8 @@ mod simple_order;
 mod vecbook;
 
 pub use fill::Fill;
-pub use simple_order::SimpleOrder;
 use order::Order;
+pub use simple_order::SimpleOrder;
 
 pub trait Orderbook<OrderType: Order>: Default {
     /// Returns the number of open orders in the order book.
