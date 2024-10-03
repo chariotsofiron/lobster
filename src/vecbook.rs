@@ -2,7 +2,7 @@ use std::cmp::Reverse;
 
 use crate::fill::Fill;
 use crate::order::Order;
-use crate::Orderbook;
+use crate::OrderBook;
 
 pub struct VecBook<OrderType> {
     /// Bids, sorted by price ascending
@@ -21,7 +21,7 @@ impl<OrderType> std::default::Default for VecBook<OrderType> {
     }
 }
 
-impl<OrderType: Order> Orderbook<OrderType> for VecBook<OrderType> {
+impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
     #[allow(clippy::arithmetic_side_effects)]
     fn len(&self) -> usize {
         self.bids.len() + self.asks.len()
@@ -111,7 +111,7 @@ fn match_orders<OrderType: Order>(
 
 #[cfg(test)]
 mod tests {
-    use super::{Fill, Orderbook};
+    use super::{Fill, OrderBook};
     use crate::simple_order::SimpleOrder;
 
     type MyBook = super::VecBook<SimpleOrder>;
