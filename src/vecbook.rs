@@ -41,7 +41,8 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
         self.asks.iter().rev()
     }
 
-    fn buy(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
+    #[allow(refining_impl_trait_reachable)]
+    fn buy(&mut self, order: OrderType) -> FillIterator<OrderType> {
         FillIterator {
             maker_orders: &mut self.asks,
             taker_orders: &mut self.bids,
@@ -52,7 +53,8 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
         }
     }
 
-    fn sell(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
+    #[allow(refining_impl_trait_reachable)]
+    fn sell(&mut self, order: OrderType) -> FillIterator<OrderType> {
         FillIterator {
             maker_orders: &mut self.bids,
             taker_orders: &mut self.asks,
