@@ -41,12 +41,34 @@ impl<OrderType: Order> Orderbook<OrderType> for VecBook<OrderType> {
         self.asks.iter().rev()
     }
 
-    fn buy(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
-        self.inner_buy(order)
+    fn buy(&mut self, mut order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
+        let asks = &mut self.asks;
+        let mut quantity = order.quantity();
+        let price = order.price();
+        let fills = std::iter::from_fn(move || match_orders(asks, &mut quantity, price));
+
+        if quantity > OrderType::Quantity::default() {
+            order.set_quantity(quantity);
+            self.bids.insert(0, order);
+            self.bids.sort_by_key(OrderType::price);
+        }
+
+        fills
     }
 
-    fn sell(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
-        self.inner_sell(order)
+    fn sell(&mut self, mut order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
+        let bids = &mut self.bids;
+        let mut quantity = order.quantity();
+        let price = order.price();
+        let fills = std::iter::from_fn(move || match_orders(bids, &mut quantity, price));
+
+        if quantity > OrderType::Quantity::default() {
+            order.set_quantity(quantity);
+            self.asks.insert(0, order);
+            self.asks.sort_by_key(|order| Reverse(order.price()));
+        }
+
+        fills
     }
 
     fn remove(&mut self, order_id: <OrderType as Order>::OrderId) -> Option<OrderType> {
@@ -60,78 +82,27 @@ impl<OrderType: Order> Orderbook<OrderType> for VecBook<OrderType> {
     }
 }
 
-impl<OrderType: Order> VecBook<OrderType> {
-    fn inner_buy(&mut self, mut order: OrderType) -> impl Iterator<Item = Fill<OrderType>> + '_ {
-        let asks = &mut self.asks;
-
-        let mut taker_quantity = order.quantity();
-        let taker_price = order.price();
-
-        let fills_iterator = std::iter::from_fn(move || {
-            let order = asks.last_mut()?;
-            if order.price() > taker_price {
-                return None;
-            }
-
-            #[allow(clippy::arithmetic_side_effects)]
-            if taker_quantity >= order.quantity() {
-                let fill = Fill::new(order.id(), order.quantity(), order.price(), true);
-                taker_quantity = taker_quantity - order.quantity();
-                asks.pop();
-                Some(fill)
-            } else {
-                let fill = Fill::new(order.id(), taker_quantity, order.price(), false);
-                order.set_quantity(order.quantity() - taker_quantity);
-                taker_quantity = OrderType::Quantity::default();
-                Some(fill)
-            }
-        });
-
-        if taker_quantity > OrderType::Quantity::default() {
-            order.set_quantity(taker_quantity);
-            self.bids.insert(0, order);
-            self.bids.sort_by_key(OrderType::price);
-        }
-
-        fills_iterator
+fn match_orders<OrderType: Order>(
+    maker_orders: &mut Vec<OrderType>,
+    quantity: &mut OrderType::Quantity,
+    price: OrderType::Price,
+) -> Option<Fill<OrderType>> {
+    let order = maker_orders.last_mut()?;
+    if order.price() > price {
+        return None;
     }
 
-    fn inner_sell(
-        &mut self,
-        mut taker_order: OrderType,
-    ) -> impl Iterator<Item = Fill<OrderType>> + '_ {
-        let bids = &mut self.bids;
-
-        let mut taker_quantity = taker_order.quantity();
-        let taker_price = taker_order.price();
-
-        let fills_iterator = std::iter::from_fn(move || {
-            let order = bids.last_mut()?;
-            if order.price() < taker_price {
-                return None;
-            }
-
-            #[allow(clippy::arithmetic_side_effects)]
-            if taker_quantity >= order.quantity() {
-                let fill = Fill::new(order.id(), order.quantity(), order.price(), true);
-                taker_quantity = taker_quantity - order.quantity();
-                bids.pop();
-                Some(fill)
-            } else {
-                let fill = Fill::new(order.id(), taker_quantity, order.price(), false);
-                order.set_quantity(order.quantity() - taker_quantity);
-                taker_quantity = OrderType::Quantity::default();
-                Some(fill)
-            }
-        });
-
-        if taker_quantity > OrderType::Quantity::default() {
-            taker_order.set_quantity(taker_quantity);
-            self.asks.insert(0, taker_order);
-            self.asks.sort_by_key(|order| Reverse(order.price()));
-        }
-
-        fills_iterator
+    #[allow(clippy::arithmetic_side_effects)]
+    if *quantity >= order.quantity() {
+        let fill = Fill::new(order.id(), order.quantity(), order.price(), true);
+        *quantity = *quantity - order.quantity();
+        maker_orders.pop();
+        Some(fill)
+    } else {
+        let fill = Fill::new(order.id(), *quantity, order.price(), false);
+        order.set_quantity(order.quantity() - *quantity);
+        *quantity = OrderType::Quantity::default();
+        Some(fill)
     }
 }
 
