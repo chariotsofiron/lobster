@@ -87,6 +87,9 @@ fn match_orders<OrderType: Order>(
     quantity: &mut OrderType::Quantity,
     price: OrderType::Price,
 ) -> Option<Fill<OrderType>> {
+    if quantity == &OrderType::Quantity::default() {
+        return None;
+    }
     let order = maker_orders.last_mut()?;
     if order.price() > price {
         return None;
@@ -115,6 +118,32 @@ mod tests {
     type MyOrder = SimpleOrder;
 
     #[test]
+    fn partial_fill() {
+        let mut book = MyBook::default();
+        book.sell(MyOrder::new(0, 2, 5)).for_each(drop);
+        let mut fills = book.buy(MyOrder::new(1, 1, 5));
+        assert_eq!(fills.next(), Some(Fill::new(0, 1, 5, false)));
+        assert_eq!(fills.next(), None);
+    }
+
+    #[test]
+    fn complete_fill() {
+        let mut book = MyBook::default();
+        book.sell(MyOrder::new(0, 2, 5)).for_each(drop);
+        let mut fills = book.buy(MyOrder::new(1, 2, 5));
+        assert_eq!(fills.next(), Some(Fill::new(0, 2, 5, true)));
+        assert_eq!(fills.next(), None);
+    }
+
+    #[test]
+    fn order_with_zero_quantity() {
+        let mut book = MyBook::default();
+        book.sell(MyOrder::new(0, 2, 5)).for_each(drop);
+        let mut fills = book.buy(MyOrder::new(1, 0, 5));
+        assert_eq!(fills.next(), None);
+    }
+
+    #[test]
     fn add_order_then_remove_twice() {
         let mut book = MyBook::default();
         let order_id = 1;
@@ -127,6 +156,8 @@ mod tests {
         assert_eq!(book.remove(order_id), None);
     }
 
+
+
     #[test]
     fn multiple_fills_with_cancel() {
         let mut book = MyBook::default();
@@ -136,6 +167,7 @@ mod tests {
         book.remove(0);
         let mut fills = book.buy(MyOrder::new(3, 6, 6));
         assert_eq!(fills.next(), Some(Fill::new(1, 3, 6, true)));
+        assert_eq!(fills.next(), None);
     }
 
     #[test]
@@ -177,6 +209,29 @@ mod tests {
         assert_eq!(fills.next(), None);
         drop(fills);
         let mut fills = book.sell(MyOrder::new(2, 1, 23));
+        assert_eq!(fills.next(), None);
+    }
+
+    #[test]
+    fn trade_twice_with_resting_order() {
+        let mut book = MyBook::default();
+        book.sell(MyOrder::new(0, 2, 23)).for_each(drop);
+        let mut fills = book.buy(MyOrder::new(1, 1, 23));
+        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, false)));
+        assert_eq!(fills.next(), None);
+        drop(fills);
+        let mut fills = book.buy(MyOrder::new(2, 1, 23));
+        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, true)));
+        assert_eq!(fills.next(), None);
+
+        let mut book = MyBook::default();
+        book.buy(MyOrder::new(0, 2, 23)).for_each(drop);
+        let mut fills = book.sell(MyOrder::new(1, 1, 23));
+        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, false)));
+        assert_eq!(fills.next(), None);
+        drop(fills);
+        let mut fills = book.sell(MyOrder::new(2, 1, 23));
+        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, true)));
         assert_eq!(fills.next(), None);
     }
 
