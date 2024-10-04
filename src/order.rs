@@ -1,7 +1,7 @@
 use std::ops::Sub;
 
 pub trait Order: Clone {
-    type OrderId: PartialEq;
+    type OrderId: Eq;
     type Quantity: Copy + Ord + Default + Sub<Output = Self::Quantity>;
     type Price: Copy + Ord;
 
