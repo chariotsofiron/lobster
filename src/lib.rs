@@ -12,12 +12,12 @@
 mod fill;
 mod order;
 mod simple_order;
+mod test;
 mod vecbook;
 
 pub use fill::Fill;
 pub use order::Order;
 pub use vecbook::VecBook;
-
 
 pub use simple_order::SimpleOrder;
 
