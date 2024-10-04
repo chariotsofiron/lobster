@@ -155,5 +155,15 @@ mod tests {
         assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, true)));
         assert_eq!(fills.next(), Some(Fill::new(1, 1, 23, true)));
         assert_eq!(fills.next(), Some(Fill::new(2, 1, 23, true)));
+
+        let mut book = MyBook::default();
+        book.buy(MyOrder::new(0, 1, 23)).for_each(drop);
+        book.buy(MyOrder::new(1, 1, 23)).for_each(drop);
+        book.buy(MyOrder::new(2, 1, 23)).for_each(drop);
+        let mut fills = book.sell(MyOrder::new(3, 3, 23));
+
+        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, true)));
+        assert_eq!(fills.next(), Some(Fill::new(1, 1, 23, true)));
+        assert_eq!(fills.next(), Some(Fill::new(2, 1, 23, true)));
     }
 }

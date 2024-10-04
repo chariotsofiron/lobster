@@ -1,4 +1,4 @@
-use std::cmp::Reverse;
+use std::cmp::Ordering;
 
 use crate::fill::Fill;
 use crate::order::Order;
@@ -93,14 +93,20 @@ impl<'a, OrderType: Order> FillIterator<'a, OrderType> {
         #[allow(clippy::unwrap_used)]
         let mut order = self.taker_order.take().unwrap();
         order.set_quantity(self.quantity);
-        self.taker_orders.insert(0, order);
 
-        if self.taker_is_buy {
-            self.taker_orders.sort_by_key(OrderType::price);
-        } else {
-            self.taker_orders
-                .sort_by_key(|order| Reverse(order.price()));
-        }
+        let index = self
+            .taker_orders
+            .binary_search_by(|probe| {
+                let cmp = if self.taker_is_buy {
+                    probe.price().cmp(&order.price())
+                } else {
+                    order.price().cmp(&probe.price())
+                };
+                cmp.then(Ordering::Greater)
+            })
+            .unwrap_or_else(|i| i);
+
+        self.taker_orders.insert(index, order);
     }
 }
 
