@@ -46,8 +46,6 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
         FillIterator {
             maker_orders: &mut self.asks,
             taker_orders: &mut self.bids,
-            quantity: order.quantity(),
-            price: order.price(),
             taker_order: Some(order),
             taker_is_buy: true,
         }
@@ -58,8 +56,6 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
         FillIterator {
             maker_orders: &mut self.bids,
             taker_orders: &mut self.asks,
-            quantity: order.quantity(),
-            price: order.price(),
             taker_order: Some(order),
             taker_is_buy: false,
         }
@@ -79,8 +75,6 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
 pub struct FillIterator<'a, OrderType: Order> {
     maker_orders: &'a mut Vec<OrderType>,
     taker_orders: &'a mut Vec<OrderType>,
-    quantity: OrderType::Quantity,
-    price: OrderType::Price,
     // This is an option to allow us to take it out of the iterator
     taker_order: Option<OrderType>,
     taker_is_buy: bool,
@@ -88,11 +82,9 @@ pub struct FillIterator<'a, OrderType: Order> {
 
 impl<'a, OrderType: Order> FillIterator<'a, OrderType> {
     fn put_taker_order_in_book(&mut self) {
-        // safety: taker_order is some until the last iteration
-        // this is the only place where we take it
-        #[allow(clippy::unwrap_used)]
-        let mut order = self.taker_order.take().unwrap();
-        order.set_quantity(self.quantity);
+        let Some(order) = self.taker_order.take() else {
+            return;
+        };
 
         let index = self
             .taker_orders
@@ -114,7 +106,8 @@ impl<'a, OrderType: Order> Iterator for FillIterator<'a, OrderType> {
     type Item = Fill<OrderType>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.quantity == OrderType::Quantity::default() {
+        let taker = self.taker_order.as_mut()?;
+        if taker.quantity() == OrderType::Quantity::default() {
             return None;
         }
 
@@ -125,9 +118,9 @@ impl<'a, OrderType: Order> Iterator for FillIterator<'a, OrderType> {
         };
 
         let is_taker_price_worse = if self.taker_is_buy {
-            order.price() > self.price
+            order.price() > taker.price()
         } else {
-            order.price() < self.price
+            order.price() < taker.price()
         };
 
         if is_taker_price_worse {
@@ -137,15 +130,15 @@ impl<'a, OrderType: Order> Iterator for FillIterator<'a, OrderType> {
 
         // match with resting order
         #[allow(clippy::arithmetic_side_effects)]
-        if self.quantity >= order.quantity() {
-            let fill = Fill::new(order.id(), order.quantity(), order.price(), true);
-            self.quantity = self.quantity - order.quantity();
+        if taker.quantity() >= order.quantity() {
+            let fill = Fill::full(order.id(), order.quantity(), order.price());
+            taker.set_quantity(taker.quantity() - order.quantity());
             self.maker_orders.pop();
             Some(fill)
         } else {
-            let fill = Fill::new(order.id(), self.quantity, order.price(), false);
-            order.set_quantity(order.quantity() - self.quantity);
-            self.quantity = OrderType::Quantity::default();
+            let fill = Fill::partial(order.id(), taker.quantity(), order.price());
+            order.set_quantity(order.quantity() - taker.quantity());
+            taker.set_quantity(OrderType::Quantity::default());
             Some(fill)
         }
     }

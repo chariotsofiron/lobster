@@ -10,7 +10,7 @@ mod tests {
         let mut book = MyBook::default();
         book.sell(MyOrder::new(0, 2, 5)).for_each(drop);
         let mut fills = book.buy(MyOrder::new(1, 1, 5));
-        assert_eq!(fills.next(), Some(Fill::new(0, 1, 5, false)));
+        assert_eq!(fills.next(), Some(Fill::partial(0, 1, 5)));
         assert_eq!(fills.next(), None);
     }
 
@@ -19,7 +19,7 @@ mod tests {
         let mut book = MyBook::default();
         book.sell(MyOrder::new(0, 2, 5)).for_each(drop);
         let mut fills = book.buy(MyOrder::new(1, 2, 5));
-        assert_eq!(fills.next(), Some(Fill::new(0, 2, 5, true)));
+        assert_eq!(fills.next(), Some(Fill::full(0, 2, 5)));
         assert_eq!(fills.next(), None);
     }
 
@@ -36,11 +36,11 @@ mod tests {
         let mut book = MyBook::default();
         book.sell(MyOrder::new(0, 2, 5)).for_each(drop);
         let mut fills = book.buy(MyOrder::new(1, 3, 5));
-        assert_eq!(fills.next(), Some(Fill::new(0, 2, 5, true)));
+        assert_eq!(fills.next(), Some(Fill::full(0, 2, 5)));
         assert_eq!(fills.next(), None);
         drop(fills);
         let mut fills = book.sell(MyOrder::new(2, 4, 5));
-        assert_eq!(fills.next(), Some(Fill::new(1, 1, 5, true)));
+        assert_eq!(fills.next(), Some(Fill::full(1, 1, 5)));
         assert_eq!(fills.next(), None);
     }
 
@@ -65,7 +65,7 @@ mod tests {
         book.sell(MyOrder::new(2, 4, 7)).for_each(drop);
         book.remove(0);
         let mut fills = book.buy(MyOrder::new(3, 6, 6));
-        assert_eq!(fills.next(), Some(Fill::new(1, 3, 6, true)));
+        assert_eq!(fills.next(), Some(Fill::full(1, 3, 6)));
         assert_eq!(fills.next(), None);
 
         let mut book = MyBook::default();
@@ -74,8 +74,8 @@ mod tests {
         book.buy(MyOrder::new(2, 2, 7)).for_each(drop);
         book.remove(0);
         let mut fills = book.sell(MyOrder::new(3, 6, 6));
-        assert_eq!(fills.next(), Some(Fill::new(2, 2, 7, true)));
-        assert_eq!(fills.next(), Some(Fill::new(1, 3, 6, true)));
+        assert_eq!(fills.next(), Some(Fill::full(2, 2, 7)));
+        assert_eq!(fills.next(), Some(Fill::full(1, 3, 6)));
         assert_eq!(fills.next(), None);
     }
 
@@ -84,7 +84,7 @@ mod tests {
         let mut book = MyBook::default();
         book.sell(MyOrder::new(0, 2, 23)).for_each(drop);
         let mut fills = book.buy(MyOrder::new(1, 2, 23));
-        assert_eq!(fills.next(), Some(Fill::new(0, 2, 23, true)));
+        assert_eq!(fills.next(), Some(Fill::full(0, 2, 23)));
         assert_eq!(fills.next(), None);
         drop(fills);
         let mut fills = book.buy(MyOrder::new(2, 2, 23));
@@ -93,7 +93,7 @@ mod tests {
         let mut book = MyBook::default();
         book.buy(MyOrder::new(0, 2, 23)).for_each(drop);
         let mut fills = book.sell(MyOrder::new(1, 2, 23));
-        assert_eq!(fills.next(), Some(Fill::new(0, 2, 23, true)));
+        assert_eq!(fills.next(), Some(Fill::full(0, 2, 23)));
         assert_eq!(fills.next(), None);
         drop(fills);
         let mut fills = book.sell(MyOrder::new(2, 2, 23));
@@ -105,7 +105,7 @@ mod tests {
         let mut book = MyBook::default();
         book.sell(MyOrder::new(0, 1, 23)).for_each(drop);
         let mut fills = book.buy(MyOrder::new(1, 2, 23));
-        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, true)));
+        assert_eq!(fills.next(), Some(Fill::full(0, 1, 23)));
         assert_eq!(fills.next(), None);
         drop(fills);
         let mut fills = book.buy(MyOrder::new(2, 1, 23));
@@ -114,7 +114,7 @@ mod tests {
         let mut book = MyBook::default();
         book.buy(MyOrder::new(0, 1, 23)).for_each(drop);
         let mut fills = book.sell(MyOrder::new(1, 2, 23));
-        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, true)));
+        assert_eq!(fills.next(), Some(Fill::full(0, 1, 23)));
         assert_eq!(fills.next(), None);
         drop(fills);
         let mut fills = book.sell(MyOrder::new(2, 1, 23));
@@ -126,21 +126,21 @@ mod tests {
         let mut book = MyBook::default();
         book.sell(MyOrder::new(0, 2, 23)).for_each(drop);
         let mut fills = book.buy(MyOrder::new(1, 1, 23));
-        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, false)));
+        assert_eq!(fills.next(), Some(Fill::partial(0, 1, 23)));
         assert_eq!(fills.next(), None);
         drop(fills);
         let mut fills = book.buy(MyOrder::new(2, 1, 23));
-        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, true)));
+        assert_eq!(fills.next(), Some(Fill::full(0, 1, 23)));
         assert_eq!(fills.next(), None);
 
         let mut book = MyBook::default();
         book.buy(MyOrder::new(0, 2, 23)).for_each(drop);
         let mut fills = book.sell(MyOrder::new(1, 1, 23));
-        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, false)));
+        assert_eq!(fills.next(), Some(Fill::partial(0, 1, 23)));
         assert_eq!(fills.next(), None);
         drop(fills);
         let mut fills = book.sell(MyOrder::new(2, 1, 23));
-        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, true)));
+        assert_eq!(fills.next(), Some(Fill::full(0, 1, 23)));
         assert_eq!(fills.next(), None);
     }
 
@@ -152,9 +152,9 @@ mod tests {
         book.sell(MyOrder::new(2, 1, 23)).for_each(drop);
         let mut fills = book.buy(MyOrder::new(3, 3, 23));
 
-        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, true)));
-        assert_eq!(fills.next(), Some(Fill::new(1, 1, 23, true)));
-        assert_eq!(fills.next(), Some(Fill::new(2, 1, 23, true)));
+        assert_eq!(fills.next(), Some(Fill::full(0, 1, 23)));
+        assert_eq!(fills.next(), Some(Fill::full(1, 1, 23)));
+        assert_eq!(fills.next(), Some(Fill::full(2, 1, 23)));
 
         let mut book = MyBook::default();
         book.buy(MyOrder::new(0, 1, 23)).for_each(drop);
@@ -162,8 +162,8 @@ mod tests {
         book.buy(MyOrder::new(2, 1, 23)).for_each(drop);
         let mut fills = book.sell(MyOrder::new(3, 3, 23));
 
-        assert_eq!(fills.next(), Some(Fill::new(0, 1, 23, true)));
-        assert_eq!(fills.next(), Some(Fill::new(1, 1, 23, true)));
-        assert_eq!(fills.next(), Some(Fill::new(2, 1, 23, true)));
+        assert_eq!(fills.next(), Some(Fill::full(0, 1, 23)));
+        assert_eq!(fills.next(), Some(Fill::full(1, 1, 23)));
+        assert_eq!(fills.next(), Some(Fill::full(2, 1, 23)));
     }
 }

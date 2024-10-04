@@ -19,17 +19,29 @@ impl<OrderType: Order> PartialEq for Fill<OrderType> {
 }
 
 impl<OrderType: Order> Fill<OrderType> {
-    pub const fn new(
+    pub const fn full(
         id: OrderType::OrderId,
         quantity: OrderType::Quantity,
         price: OrderType::Price,
-        done: bool,
     ) -> Self {
         Self {
             id,
             quantity,
             price,
-            done,
+            done: true,
+        }
+    }
+
+    pub const fn partial(
+        id: OrderType::OrderId,
+        quantity: OrderType::Quantity,
+        price: OrderType::Price,
+    ) -> Self {
+        Self {
+            id,
+            quantity,
+            price,
+            done: false,
         }
     }
 }
