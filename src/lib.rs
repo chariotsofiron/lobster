@@ -61,5 +61,10 @@ pub trait OrderBook<OrderType: Order>: Default {
     fn sell(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>>;
 
     /// Removes an order by id.
-    fn remove(&mut self, id: OrderType::OrderId) -> Option<OrderType>;
+    fn remove(&mut self, order_id: OrderType::OrderId) -> Option<OrderType>;
+
+    /// Modifies the quantity of an order by order id.
+    /// Quantity must be non-zero and less than the current order quantity.
+    /// Returns `true` if the order's quantity was modified.
+    fn modify(&mut self, order_id: OrderType::OrderId, quantity: OrderType::Quantity) -> bool;
 }

@@ -61,7 +61,7 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
         }
     }
 
-    fn remove(&mut self, order_id: <OrderType as Order>::OrderId) -> Option<OrderType> {
+    fn remove(&mut self, order_id: OrderType::OrderId) -> Option<OrderType> {
         if let Some(i) = self.bids.iter().position(|order| order.id() == order_id) {
             return Some(self.bids.remove(i));
         }
@@ -69,6 +69,27 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
             return Some(self.asks.remove(i));
         }
         None
+    }
+
+    fn modify(&mut self, order_id: OrderType::OrderId, quantity: OrderType::Quantity) -> bool {
+        if quantity == OrderType::Quantity::default() {
+            return false;
+        }
+        if let Some(order) = self.bids.iter_mut().find(|order| order.id() == order_id) {
+            if order.quantity() <= quantity {
+                return false;
+            }
+            order.set_quantity(quantity);
+            return true;
+        }
+        if let Some(order) = self.asks.iter_mut().find(|order| order.id() == order_id) {
+            if order.quantity() <= quantity {
+                return false;
+            }
+            order.set_quantity(quantity);
+            return true;
+        }
+        false
     }
 }
 

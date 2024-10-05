@@ -166,4 +166,13 @@ mod tests {
         assert_eq!(fills.next(), Some(Fill::full(1, 1, 23)));
         assert_eq!(fills.next(), Some(Fill::full(2, 1, 23)));
     }
+
+    #[test]
+    fn test_modify_order() {
+        let mut book = MyBook::default();
+        book.sell(MyOrder::new(0, 2, 23)).for_each(drop);
+        assert_eq!(book.modify(0, 0), false);
+        assert_eq!(book.modify(0, 1), true);
+        assert_eq!(book.modify(0, 1), false);
+    }
 }
