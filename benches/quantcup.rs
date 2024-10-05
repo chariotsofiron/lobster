@@ -15,10 +15,11 @@ fn load_actions() -> Vec<Action> {
     let lines = file.lines().skip(1);
 
     let mut actions: Vec<Action> = Vec::with_capacity(35760);
+    let mut order_id = 0;
 
     for line in lines {
         let mut fields = line.split(',');
-        let trader_id: u32 = fields.next().unwrap().parse().unwrap();
+        let _trader_id: u32 = fields.next().unwrap().parse().unwrap();
         let side: &str = fields.next().unwrap();
         let price: u32 = fields.next().unwrap().parse().unwrap();
         let quantity: u32 = fields.next().unwrap().parse().unwrap();
@@ -26,9 +27,11 @@ fn load_actions() -> Vec<Action> {
         if price == 0 {
             actions.push(Action::Cancel(quantity));
         } else if side == "Bid" {
-            actions.push(Action::Buy(SimpleOrder::new(trader_id, quantity, price)));
+            actions.push(Action::Buy(SimpleOrder::new(order_id, quantity, price)));
+            order_id += 1;
         } else if side == "Ask" {
-            actions.push(Action::Sell(SimpleOrder::new(trader_id, quantity, price)));
+            actions.push(Action::Sell(SimpleOrder::new(order_id, quantity, price)));
+            order_id += 1;
         } else {
             panic!("Invalid action: {}", side);
         }
