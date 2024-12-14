@@ -1,9 +1,10 @@
 //! Order trait for orders in an order book.
 use core::ops::Sub;
+use core::hash::Hash;
 
 /// An order in an order book.
 pub trait Order {
-    type OrderId: Eq;
+    type OrderId: Eq + Hash + Clone;
     type Quantity: Copy + Ord + Default + Sub<Output = Self::Quantity>;
     type Price: Copy + Ord;
 

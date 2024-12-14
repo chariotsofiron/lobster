@@ -4,13 +4,7 @@
     clippy::pedantic,
     clippy::nursery,
     clippy::cargo,
-    // clippy::as_conversions,
-    // clippy::arithmetic_side_effects,
-    // clippy::expect_used,
-    // clippy::float_arithmetic,
-    // clippy::integer_division,
-    // clippy::unwrap_used,
-    clippy::restriction,
+    clippy::restriction
 )]
 #![allow(
     clippy::missing_trait_methods,
