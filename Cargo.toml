@@ -1,7 +1,12 @@
 [package]
 name = "lobster"
 version = "0.1.0"
+description = "Limit order book library."
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/chariotsofiron/lobster"
+keywords = ["orderbook", "trading", "finance"]
+categories = ["orderbook", "trading", "finance"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

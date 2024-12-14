@@ -5,8 +5,7 @@ use lobster::{SimpleOrder, VecBook};
 
 use lobster::OrderBook;
 enum Action {
-    Buy(SimpleOrder),
-    Sell(SimpleOrder),
+    Add(SimpleOrder),
     Cancel(u32),
 }
 
@@ -27,10 +26,10 @@ fn load_actions() -> Vec<Action> {
         if price == 0 {
             actions.push(Action::Cancel(quantity));
         } else if side == "Bid" {
-            actions.push(Action::Buy(SimpleOrder::new(order_id, quantity, price)));
+            actions.push(Action::Add(SimpleOrder::buy(order_id, quantity, price)));
             order_id += 1;
         } else if side == "Ask" {
-            actions.push(Action::Sell(SimpleOrder::new(order_id, quantity, price)));
+            actions.push(Action::Add(SimpleOrder::sell(order_id, quantity, price)));
             order_id += 1;
         } else {
             panic!("Invalid action: {}", side);
@@ -43,11 +42,8 @@ fn run_test(actions: &[Action]) {
     let mut book = VecBook::<SimpleOrder>::default();
     for action in actions {
         match *action {
-            Action::Buy(order) => {
-                book.buy(order).for_each(drop);
-            }
-            Action::Sell(order) => {
-                book.sell(order).for_each(drop);
+            Action::Add(order) => {
+                book.add(order).for_each(drop);
             }
             Action::Cancel(id) => {
                 book.remove(id);

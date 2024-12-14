@@ -1,3 +1,4 @@
+//! A fill represents an execution.
 use crate::order::Order;
 
 /// A fill represents a trade between two orders.

@@ -1,3 +1,4 @@
+//! Order book trait.
 use crate::{Fill, Order};
 
 pub trait OrderBook<OrderType: Order>: Default {
@@ -5,21 +6,21 @@ pub trait OrderBook<OrderType: Order>: Default {
     #[must_use]
     fn len(&self) -> usize;
 
-    /// Returns `true` if the book contains no open orders.
+    /// Returns `true` if the order book contains no open orders.
     #[must_use]
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Returns an iterator over the bids from best to worst.
-    fn bids<'a>(&'a self) -> impl Iterator<Item = &'a OrderType>
+    fn bids<'book>(&'book self) -> impl Iterator<Item = &'book OrderType>
     where
-        OrderType: 'a;
+        OrderType: 'book;
 
     /// Returns an iterator over the asks from best to worst.
-    fn asks<'a>(&'a self) -> impl Iterator<Item = &'a OrderType>
+    fn asks<'book>(&'book self) -> impl Iterator<Item = &'book OrderType>
     where
-        OrderType: 'a;
+        OrderType: 'book;
 
     /// Returns the best bid.
     #[must_use]
@@ -33,11 +34,8 @@ pub trait OrderBook<OrderType: Order>: Default {
         self.asks().next()
     }
 
-    /// Adds a buy order to the order book and returns an iterator of fills.
-    fn buy(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>>;
-
-    /// Adds a sell order to the order book and returns an iterator of fills.
-    fn sell(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>>;
+    /// Adds a new order to the order book and returns an iterator of fills.
+    fn add(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>>;
 
     /// Removes an order by id.
     fn remove(&mut self, order_id: OrderType::OrderId) -> Option<OrderType>;

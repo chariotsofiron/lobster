@@ -1,9 +1,13 @@
-use std::cmp::Ordering;
+//! A simple order book implementation using vectors.
+use core::cmp::Ordering;
+use core::default::Default;
 
 use crate::fill::Fill;
 use crate::order::Order;
 use crate::OrderBook;
 
+/// A simple order book implementation using vectors.
+#[derive(Debug, Clone)]
 pub struct VecBook<OrderType> {
     /// Bids, sorted by price ascending
     /// Best bid is at the end and is matched with first
@@ -12,7 +16,7 @@ pub struct VecBook<OrderType> {
     asks: Vec<OrderType>,
 }
 
-impl<OrderType> std::default::Default for VecBook<OrderType> {
+impl<OrderType> Default for VecBook<OrderType> {
     fn default() -> Self {
         Self {
             bids: Vec::new(),
@@ -22,42 +26,41 @@ impl<OrderType> std::default::Default for VecBook<OrderType> {
 }
 
 impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
-    #[allow(clippy::arithmetic_side_effects)]
+    #[expect(clippy::arithmetic_side_effects)]
     fn len(&self) -> usize {
         self.bids.len() + self.asks.len()
     }
 
-    fn bids<'a>(&'a self) -> impl Iterator<Item = &'a OrderType>
+    fn bids<'book>(&'book self) -> impl Iterator<Item = &'book OrderType>
     where
-        OrderType: 'a,
+        OrderType: 'book,
     {
         self.bids.iter().rev()
     }
 
-    fn asks<'a>(&'a self) -> impl Iterator<Item = &'a OrderType>
+    fn asks<'book>(&'book self) -> impl Iterator<Item = &'book OrderType>
     where
-        OrderType: 'a,
+        OrderType: 'book,
     {
         self.asks.iter().rev()
     }
 
-    #[allow(refining_impl_trait_reachable)]
-    fn buy(&mut self, order: OrderType) -> FillIterator<OrderType> {
-        FillIterator {
-            maker_orders: &mut self.asks,
-            taker_orders: &mut self.bids,
-            taker_order: Some(order),
-            taker_is_buy: true,
-        }
-    }
-
-    #[allow(refining_impl_trait_reachable)]
-    fn sell(&mut self, order: OrderType) -> FillIterator<OrderType> {
-        FillIterator {
-            maker_orders: &mut self.bids,
-            taker_orders: &mut self.asks,
-            taker_order: Some(order),
-            taker_is_buy: false,
+    // #[allow(refining_impl_trait_reachable)]
+    fn add(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
+        if order.is_buy() {
+            FillIterator {
+                maker_orders: &mut self.asks,
+                taker_orders: &mut self.bids,
+                taker_order: Some(order),
+                taker_is_buy: true,
+            }
+        } else {
+            FillIterator {
+                maker_orders: &mut self.bids,
+                taker_orders: &mut self.asks,
+                taker_order: Some(order),
+                taker_is_buy: false,
+            }
         }
     }
 
@@ -93,15 +96,20 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
     }
 }
 
-pub struct FillIterator<'a, OrderType: Order> {
-    maker_orders: &'a mut Vec<OrderType>,
-    taker_orders: &'a mut Vec<OrderType>,
-    // This is an option to allow us to take it out of the iterator
+/// An iterator that yields fills for a taker order.
+pub struct FillIterator<'book, OrderType: Order> {
+    /// Maker orders are sorted by price descending.
+    maker_orders: &'book mut Vec<OrderType>,
+    /// Taker orders are sorted by price ascending.
+    taker_orders: &'book mut Vec<OrderType>,
+    /// This is an option to allow us to take it out of the iterator
     taker_order: Option<OrderType>,
+    /// `true` if the taker order is a buy order, `false` if it is a sell order.
     taker_is_buy: bool,
 }
 
-impl<'a, OrderType: Order> FillIterator<'a, OrderType> {
+impl<OrderType: Order> FillIterator<'_, OrderType> {
+    /// Put the taker order back in the book if it was not fully matched.
     fn put_taker_order_in_book(&mut self) {
         let Some(order) = self.taker_order.take() else {
             return;
@@ -123,7 +131,7 @@ impl<'a, OrderType: Order> FillIterator<'a, OrderType> {
     }
 }
 
-impl<'a, OrderType: Order> Iterator for FillIterator<'a, OrderType> {
+impl<OrderType: Order> Iterator for FillIterator<'_, OrderType> {
     type Item = Fill<OrderType>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -150,7 +158,7 @@ impl<'a, OrderType: Order> Iterator for FillIterator<'a, OrderType> {
         }
 
         // match with resting order
-        #[allow(clippy::arithmetic_side_effects)]
+        #[expect(clippy::arithmetic_side_effects)]
         if taker.quantity() >= order.quantity() {
             let fill = Fill::full(order.id(), order.quantity(), order.price());
             taker.set_quantity(taker.quantity() - order.quantity());
