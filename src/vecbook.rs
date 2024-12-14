@@ -158,15 +158,14 @@ impl<OrderType: Order> Iterator for FillIterator<'_, OrderType> {
         }
 
         // match with resting order
-        #[expect(clippy::arithmetic_side_effects)]
         if taker.quantity() >= order.quantity() {
             let fill = Fill::full(order.id(), order.quantity(), order.price());
-            taker.set_quantity(taker.quantity() - order.quantity());
+            taker.reduce_quantity(order.quantity());
             self.maker_orders.pop();
             Some(fill)
         } else {
             let fill = Fill::partial(order.id(), taker.quantity(), order.price());
-            order.set_quantity(order.quantity() - taker.quantity());
+            order.reduce_quantity(taker.quantity());
             taker.set_quantity(OrderType::Quantity::default());
             Some(fill)
         }
