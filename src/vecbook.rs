@@ -157,17 +157,21 @@ impl<OrderType: Order> Iterator for FillIterator<'_, OrderType> {
             return None;
         }
 
-        // match with resting order
         if taker.quantity() >= order.quantity() {
-            let fill = Fill::full(order.id(), order.quantity(), order.price());
             taker.reduce_quantity(order.quantity());
-            self.maker_orders.pop();
-            Some(fill)
+
+            let Some(fill) = self.maker_orders.pop() else {
+                return None; // infallible
+            };
+            Some(Fill::Full(fill))
         } else {
-            let fill = Fill::partial(order.id(), taker.quantity(), order.price());
+            let fill_qty = taker.quantity();
             order.reduce_quantity(taker.quantity());
             taker.set_quantity(OrderType::Quantity::default());
-            Some(fill)
+
+            let mut fill = order.clone();
+            fill.set_quantity(fill_qty);
+            Some(Fill::Partial(fill))
         }
     }
 }

@@ -14,7 +14,7 @@ pros
 
 cons
 
-- order type would need a side field, increasing its size. Isn't necessary in most orderbook implementations
+- order type would need a side field, increasing its size. Isn't necessary in many orderbook implementations
 - orderbook implementations often store bids and asks separately, and side can be implicitly derived
 - separate buy and sell methods with different return types can avoid branching
     - don't need initial buy/sell check
@@ -59,3 +59,11 @@ There are 3 options
 ## Why no mid price function?
 
 - price is generic and mid price may not be well-defined
+
+
+## Order reference
+
+Returning order references would be nice
+how do we indicate fills?
+update quantity to represent quantity filled
+how do we indicate whether order was completely filled?

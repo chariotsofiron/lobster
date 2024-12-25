@@ -33,6 +33,12 @@ impl SimpleOrder {
             is_buy: false,
         }
     }
+
+    #[must_use]
+    pub fn with_quantity(mut self, quantity: u32) -> Self {
+        self.set_quantity(quantity);
+        self
+    }
 }
 
 impl Order for SimpleOrder {

@@ -7,14 +7,15 @@
     clippy::restriction
 )]
 #![allow(
-    clippy::missing_trait_methods,
-    clippy::question_mark_used,
-    clippy::missing_inline_in_public_items,
-    clippy::implicit_return,
-    clippy::pub_use,
+    clippy::allow_attributes_without_reason,
     clippy::blanket_clippy_restriction_lints,
+    clippy::exhaustive_enums,
     clippy::exhaustive_structs,
-    clippy::allow_attributes_without_reason
+    clippy::implicit_return,
+    clippy::missing_inline_in_public_items,
+    clippy::missing_trait_methods,
+    clippy::pub_use,
+    clippy::question_mark_used
 )]
 mod fill;
 mod order;

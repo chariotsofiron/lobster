@@ -3,7 +3,7 @@ use core::hash::Hash;
 use core::ops::Sub;
 
 /// An order in an order book.
-pub trait Order {
+pub trait Order: Clone {
     type OrderId: Eq + Hash + Clone;
     type Quantity: Copy + Ord + Default + Sub<Output = Self::Quantity>;
     type Price: Copy + Ord;
