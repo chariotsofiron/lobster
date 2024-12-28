@@ -1,8 +1,21 @@
 //! A fill represents an execution.
-use crate::order::Order;
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum Fill<OrderType: Order> {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Fill<OrderType> {
     Partial(OrderType),
     Full(OrderType),
+}
+
+impl<OrderType> Fill<OrderType> {
+    pub const fn as_ref(&self) -> &OrderType {
+        match &self {
+            Self::Partial(order) | Self::Full(order) => order,
+        }
+    }
+
+    pub fn unwrap(self) -> OrderType {
+        match self {
+            Self::Partial(order) | Self::Full(order) => order,
+        }
+    }
 }
