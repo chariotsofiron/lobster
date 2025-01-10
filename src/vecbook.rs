@@ -175,3 +175,13 @@ impl<OrderType: Order> Iterator for FillIterator<'_, OrderType> {
         }
     }
 }
+
+impl<OrderType: Order> FromIterator<OrderType> for VecBook<OrderType> {
+    fn from_iter<I: IntoIterator<Item = OrderType>>(iter: I) -> Self {
+        let mut book = Self::default();
+        for order in iter {
+            assert!(book.add(order).next().is_none());
+        }
+        book
+    }
+}

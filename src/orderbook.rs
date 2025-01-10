@@ -1,7 +1,7 @@
 //! Order book trait.
 use crate::{Fill, Order};
 
-pub trait OrderBook<OrderType: Order>: Default {
+pub trait OrderBook<OrderType: Order>: Default + FromIterator<OrderType> {
     /// Returns the number of open orders in the order book.
     #[must_use]
     fn len(&self) -> usize;
