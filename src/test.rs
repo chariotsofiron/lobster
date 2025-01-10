@@ -210,9 +210,8 @@ mod tests {
 
     #[test]
     fn test_modify_order() {
-        let mut book = MyBook::default();
-        let o0 = MyOrder::sell(0, 2, 23);
-        book.add(o0).for_each(drop);
+        let mut book = MyBook::from_iter([MyOrder::sell(0, 2, 23)]);
+
         assert_eq!(book.modify(0, 0), false);
         assert_eq!(book.modify(0, 1), true);
         assert_eq!(book.modify(0, 1), false);

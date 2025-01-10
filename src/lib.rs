@@ -10,7 +10,6 @@
     clippy::allow_attributes_without_reason,
     clippy::blanket_clippy_restriction_lints,
     clippy::exhaustive_enums,
-    clippy::exhaustive_structs,
     clippy::implicit_return,
     clippy::missing_inline_in_public_items,
     clippy::missing_trait_methods,
