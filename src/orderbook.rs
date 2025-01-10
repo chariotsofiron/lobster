@@ -15,6 +15,24 @@ pub trait OrderBook<OrderType: Order>: Default + FromIterator<OrderType> {
     /// Clears the order book, removing all orders.
     fn clear(&mut self);
 
+    /// Returns an iterator over all orders in the order book.
+    fn iter<'book>(&'book self) -> impl Iterator<Item = &'book OrderType>
+    where
+        OrderType: 'book,
+    {
+        self.bids().chain(self.asks())
+    }
+
+    /// Returns a reference to an order by id.
+    fn get(&self, order_id: OrderType::OrderId) -> Option<&OrderType> {
+        self.iter().find(|order| order.id() == order_id)
+    }
+
+    /// Returns `true` if the order book contains an order with the given id.
+    fn contains(&self, order_id: OrderType::OrderId) -> bool {
+        self.get(order_id).is_some()
+    }
+
     /// Returns an iterator over the bids from best to worst.
     fn bids<'book>(&'book self) -> impl Iterator<Item = &'book OrderType>
     where
