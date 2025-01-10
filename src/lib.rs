@@ -15,7 +15,8 @@
     clippy::missing_inline_in_public_items,
     clippy::missing_trait_methods,
     clippy::pub_use,
-    clippy::question_mark_used
+    clippy::question_mark_used,
+    clippy::ref_patterns
 )]
 mod fill;
 mod order;

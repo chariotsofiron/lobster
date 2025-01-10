@@ -180,7 +180,7 @@ impl<OrderType: Order> FromIterator<OrderType> for VecBook<OrderType> {
     fn from_iter<I: IntoIterator<Item = OrderType>>(iter: I) -> Self {
         let mut book = Self::default();
         for order in iter {
-            assert!(book.add(order).next().is_none());
+            assert!(book.add(order).next().is_none(), "unexpected fill");
         }
         book
     }

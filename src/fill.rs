@@ -8,8 +8,8 @@ pub enum Fill<OrderType> {
 
 impl<OrderType> Fill<OrderType> {
     pub const fn as_ref(&self) -> &OrderType {
-        match &self {
-            Self::Partial(order) | Self::Full(order) => order,
+        match self {
+            &Self::Partial(ref order) | &Self::Full(ref order) => order,
         }
     }
 

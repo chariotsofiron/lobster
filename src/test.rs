@@ -181,31 +181,25 @@ mod tests {
 
     #[test]
     fn test_queue_priority() {
-        let mut book = MyBook::default();
-        let o0 = MyOrder::sell(0, 1, 23);
-        let o1 = MyOrder::sell(1, 1, 23);
-        let o2 = MyOrder::sell(2, 1, 23);
-        book.add(o0).for_each(drop);
-        book.add(o1).for_each(drop);
-        book.add(o2).for_each(drop);
-        let mut fills = book.add(MyOrder::buy(3, 3, 23));
+        let orders = vec![
+            MyOrder::sell(0, 1, 23),
+            MyOrder::sell(1, 1, 23),
+            MyOrder::sell(2, 1, 23),
+        ];
 
-        assert_eq!(fills.next(), Some(Fill::Full(o0)));
-        assert_eq!(fills.next(), Some(Fill::Full(o1)));
-        assert_eq!(fills.next(), Some(Fill::Full(o2)));
+        let mut book = MyBook::from_iter(orders.clone());
+        let fills = book.add(MyOrder::buy(3, 3, 23));
+        assert!(orders.into_iter().map(Fill::Full).eq(fills), "fills unexpected");
 
-        let mut book = MyBook::default();
-        let o0 = MyOrder::buy(0, 1, 23);
-        let o1 = MyOrder::buy(1, 1, 23);
-        let o2 = MyOrder::buy(2, 1, 23);
-        book.add(o0).for_each(drop);
-        book.add(o1).for_each(drop);
-        book.add(o2).for_each(drop);
-        let mut fills = book.add(MyOrder::sell(3, 3, 23));
+        let orders = vec![
+            MyOrder::buy(0, 1, 23),
+            MyOrder::buy(1, 1, 23),
+            MyOrder::buy(2, 1, 23),
+        ];
 
-        assert_eq!(fills.next(), Some(Fill::Full(o0)));
-        assert_eq!(fills.next(), Some(Fill::Full(o1)));
-        assert_eq!(fills.next(), Some(Fill::Full(o2)));
+        let mut book = MyBook::from_iter(orders.clone());
+        let fills = book.add(MyOrder::sell(3, 3, 23));
+        assert!(orders.into_iter().map(Fill::Full).eq(fills), "fills unexpected");
     }
 
     #[test]
