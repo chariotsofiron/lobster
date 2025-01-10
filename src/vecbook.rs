@@ -31,6 +31,11 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
         self.bids.len() + self.asks.len()
     }
 
+    fn clear(&mut self) {
+        self.bids.clear();
+        self.asks.clear();
+    }
+
     fn bids<'book>(&'book self) -> impl Iterator<Item = &'book OrderType>
     where
         OrderType: 'book,

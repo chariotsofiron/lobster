@@ -12,6 +12,9 @@ pub trait OrderBook<OrderType: Order>: Default + FromIterator<OrderType> {
         self.len() == 0
     }
 
+    /// Clears the order book, removing all orders.
+    fn clear(&mut self);
+
     /// Returns an iterator over the bids from best to worst.
     fn bids<'book>(&'book self) -> impl Iterator<Item = &'book OrderType>
     where
