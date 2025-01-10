@@ -189,7 +189,10 @@ mod tests {
 
         let mut book = MyBook::from_iter(orders.clone());
         let fills = book.add(MyOrder::buy(3, 3, 23));
-        assert!(orders.into_iter().map(Fill::Full).eq(fills), "fills unexpected");
+        assert!(
+            orders.into_iter().map(Fill::Full).eq(fills),
+            "fills unexpected"
+        );
 
         let orders = vec![
             MyOrder::buy(0, 1, 23),
@@ -199,7 +202,10 @@ mod tests {
 
         let mut book = MyBook::from_iter(orders.clone());
         let fills = book.add(MyOrder::sell(3, 3, 23));
-        assert!(orders.into_iter().map(Fill::Full).eq(fills), "fills unexpected");
+        assert!(
+            orders.into_iter().map(Fill::Full).eq(fills),
+            "fills unexpected"
+        );
     }
 
     #[test]
