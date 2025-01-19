@@ -43,7 +43,7 @@ fn run_test(actions: &[Action]) {
     for action in actions {
         match *action {
             Action::Add(order) => {
-                book.add(order).for_each(drop);
+                book.add(order);
             }
             Action::Cancel(id) => {
                 book.remove(id);

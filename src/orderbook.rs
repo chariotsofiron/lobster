@@ -55,8 +55,8 @@ pub trait OrderBook<OrderType: Order>: Default + FromIterator<OrderType> {
         self.asks().next()
     }
 
-    /// Adds a new order to the order book and returns an iterator of fills.
-    fn add(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>>;
+    /// Adds a new order to the order book and returns a slice of fills.
+    fn add(&mut self, order: OrderType) -> &[Fill<OrderType>];
 
     /// Removes an order by id.
     fn remove(&mut self, order_id: OrderType::OrderId) -> Option<OrderType>;

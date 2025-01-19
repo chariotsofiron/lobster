@@ -14,6 +14,8 @@ pub struct VecBook<OrderType> {
     bids: Vec<OrderType>,
     /// Asks, sorted by price descending
     asks: Vec<OrderType>,
+    /// Tracks fills
+    fills: Vec<Fill<OrderType>>,
 }
 
 impl<OrderType> Default for VecBook<OrderType> {
@@ -21,6 +23,7 @@ impl<OrderType> Default for VecBook<OrderType> {
         Self {
             bids: Vec::new(),
             asks: Vec::new(),
+            fills: Vec::new(),
         }
     }
 }
@@ -50,23 +53,17 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
         self.asks.iter().rev()
     }
 
-    // #[allow(refining_impl_trait_reachable)]
-    fn add(&mut self, order: OrderType) -> impl Iterator<Item = Fill<OrderType>> {
-        if order.is_buy() {
-            FillIterator {
-                maker_orders: &mut self.asks,
-                taker_orders: &mut self.bids,
-                taker_order: Some(order),
-                taker_is_buy: true,
-            }
-        } else {
-            FillIterator {
-                maker_orders: &mut self.bids,
-                taker_orders: &mut self.asks,
-                taker_order: Some(order),
-                taker_is_buy: false,
-            }
+    fn add(&mut self, order: OrderType) -> &[Fill<OrderType>] {
+        self.fills.clear();
+        if order.quantity() == OrderType::Quantity::default() {
+            return &self.fills;
         }
+        if order.is_buy() {
+            self.match_with_asks(order);
+        } else {
+            self.match_with_bids(order);
+        }
+        &self.fills
     }
 
     fn remove(&mut self, order_id: OrderType::OrderId) -> Option<OrderType> {
@@ -101,83 +98,85 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
     }
 }
 
-/// An iterator that yields fills for a taker order.
-pub struct FillIterator<'book, OrderType: Order> {
-    /// Maker orders are sorted by price descending.
-    maker_orders: &'book mut Vec<OrderType>,
-    /// Taker orders are sorted by price ascending.
-    taker_orders: &'book mut Vec<OrderType>,
-    /// This is an option to allow us to take it out of the iterator
-    taker_order: Option<OrderType>,
-    /// `true` if the taker order is a buy order, `false` if it is a sell order.
-    taker_is_buy: bool,
-}
-
-impl<OrderType: Order> FillIterator<'_, OrderType> {
-    /// Put the taker order back in the book if it was not fully matched.
-    fn put_taker_order_in_book(&mut self) {
-        let Some(order) = self.taker_order.take() else {
-            return;
-        };
+impl<OrderType: Order> VecBook<OrderType> {
+    /// Match buy order with asks
+    fn match_with_asks(&mut self, mut taker: OrderType) {
+        loop {
+            let Some(maker) = self.asks.last_mut() else {
+                break;
+            };
+            if taker.price() < maker.price() {
+                break;
+            }
+            match taker.quantity().cmp(&maker.quantity()) {
+                Ordering::Equal => {
+                    #[expect(clippy::unwrap_used)]
+                    let fill = self.asks.pop().unwrap(); // infallible
+                    self.fills.push(Fill::Full(fill));
+                    return;
+                }
+                Ordering::Greater => {
+                    taker.reduce_quantity(maker.quantity());
+                    #[expect(clippy::unwrap_used)]
+                    let fill = self.asks.pop().unwrap(); // infallible
+                    self.fills.push(Fill::Full(fill));
+                }
+                Ordering::Less => {
+                    maker.reduce_quantity(taker.quantity());
+                    let mut fill = maker.clone();
+                    fill.set_quantity(taker.quantity());
+                    self.fills.push(Fill::Partial(fill));
+                    return;
+                }
+            }
+        }
 
         let index = self
-            .taker_orders
-            .binary_search_by(|probe| {
-                let cmp = if self.taker_is_buy {
-                    probe.price().cmp(&order.price())
-                } else {
-                    order.price().cmp(&probe.price())
-                };
-                cmp.then(Ordering::Greater)
-            })
+            .bids
+            .binary_search_by(|probe| probe.price().cmp(&taker.price()).then(Ordering::Greater))
             .unwrap_or_else(|i| i);
 
-        self.taker_orders.insert(index, order);
+        self.bids.insert(index, taker);
     }
-}
 
-impl<OrderType: Order> Iterator for FillIterator<'_, OrderType> {
-    type Item = Fill<OrderType>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let taker = self.taker_order.as_mut()?;
-        if taker.quantity() == OrderType::Quantity::default() {
-            return None;
-        }
-
-        // are there any valid orders to match with?
-        let Some(order) = self.maker_orders.last_mut() else {
-            self.put_taker_order_in_book();
-            return None;
-        };
-
-        let is_taker_price_worse = if self.taker_is_buy {
-            order.price() > taker.price()
-        } else {
-            order.price() < taker.price()
-        };
-
-        if is_taker_price_worse {
-            self.put_taker_order_in_book();
-            return None;
-        }
-
-        if taker.quantity() >= order.quantity() {
-            taker.reduce_quantity(order.quantity());
-
-            let Some(fill) = self.maker_orders.pop() else {
-                return None; // infallible
+    /// Match sell order with bids
+    fn match_with_bids(&mut self, mut taker: OrderType) {
+        loop {
+            let Some(maker) = self.bids.last_mut() else {
+                break;
             };
-            Some(Fill::Full(fill))
-        } else {
-            let fill_qty = taker.quantity();
-            order.reduce_quantity(taker.quantity());
-            taker.set_quantity(OrderType::Quantity::default());
-
-            let mut fill = order.clone();
-            fill.set_quantity(fill_qty);
-            Some(Fill::Partial(fill))
+            if taker.price() > maker.price() {
+                break;
+            }
+            match taker.quantity().cmp(&maker.quantity()) {
+                Ordering::Equal => {
+                    #[expect(clippy::unwrap_used)]
+                    let fill = self.bids.pop().unwrap(); // infallible
+                    self.fills.push(Fill::Full(fill));
+                    return;
+                }
+                Ordering::Greater => {
+                    taker.reduce_quantity(maker.quantity());
+                    #[expect(clippy::unwrap_used)]
+                    let fill = self.bids.pop().unwrap(); // infallible
+                    self.fills.push(Fill::Full(fill));
+                }
+                Ordering::Less => {
+                    maker.reduce_quantity(taker.quantity());
+                    let mut fill = maker.clone();
+                    fill.set_quantity(taker.quantity());
+                    self.fills.push(Fill::Partial(fill));
+                    return;
+                }
+            }
         }
+
+        let index = self
+            .bids
+            .binary_search_by(|probe| taker.price().cmp(&probe.price()).then(Ordering::Greater))
+            .unwrap_or_else(|i| i);
+
+        self.asks.insert(index, taker);
     }
 }
 
@@ -185,7 +184,7 @@ impl<OrderType: Order> FromIterator<OrderType> for VecBook<OrderType> {
     fn from_iter<I: IntoIterator<Item = OrderType>>(iter: I) -> Self {
         let mut book = Self::default();
         for order in iter {
-            assert!(book.add(order).next().is_none(), "unexpected fill");
+            assert!(book.add(order).is_empty(), "unexpected fill");
         }
         book
     }
