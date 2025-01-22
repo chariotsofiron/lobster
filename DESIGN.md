@@ -21,18 +21,31 @@ cons
     - may need to check side flag on match iteration
     - branch prediction may make all these irrrelevant
 
-## Why return iterator?
+## Add order return type
 
-There are 3 options
+What should the function signature be for the add order method?
 
-1. `fn add(&mut self, order: Order, &mut Vec<Fill>) -> ()`
-2. `fn add(&mut self, order: Order) -> Vec<Fill>`
-3. `fn add(&mut self, order: Order) -> impl Iterator<Item=Fill>`
+> `fn add(&mut self, order: Order, &mut Vec<Fill>) -> ()`
 
-- First is prone to misuse if caller doesn't clear vector.
-- Second requires allocations for every add
-- Third avoids allocations, allows interrupting order matching if needed. Puts control in the hands of the caller.
+- use an out parameter to avoid allocations
+- tedious for caller to manage buffer
 
+> `fn add(&mut self, order: Order) -> Vec<Fill>`
+
+- allocates a new vector for every add
+
+> `fn add(&mut self, order: Order) -> impl Iterator<Item=Fill>`
+
+- avoids allocations
+- effectful iterators are generally considered bad practice
+- what happens if we drop the iterator before it's done?
+- why would we want this?
+
+> `fn add(&mut self, order: Order) -> &[Fill<Order>]`
+
+- let book manage the buffer
+- caller can't modify the buffer
+- allocation free
 
 ## Why not use signed quantity to represent sells?
 
