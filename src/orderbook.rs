@@ -43,19 +43,21 @@ pub trait OrderBook<OrderType: Order>: Default + FromIterator<OrderType> {
     where
         OrderType: 'book;
 
-    /// Returns the best bid.
+    /// Returns the bid with the highest price.
     #[must_use]
     fn best_bid(&self) -> Option<&OrderType> {
         self.bids().next()
     }
 
-    /// Returns the best ask.
+    /// Returns the ask with the lowest price.
     #[must_use]
     fn best_ask(&self) -> Option<&OrderType> {
         self.asks().next()
     }
 
     /// Adds a new order to the order book and returns a slice of fills.
+    /// Order id should be unique for each new order.
+    /// Orders with zero quantity are not added.
     fn add(&mut self, order: OrderType) -> &[Fill<OrderType>];
 
     /// Removes an order by id.
