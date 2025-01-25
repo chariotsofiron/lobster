@@ -55,9 +55,9 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
 
     fn add(&mut self, order: OrderType) -> &[Fill<OrderType>] {
         self.fills.clear();
-        if order.quantity() == OrderType::Quantity::default() {
-            return &self.fills;
-        }
+        // if order.quantity() == OrderType::Quantity::default() {
+        //     return &self.fills;
+        // }
         if order.is_buy() {
             self.match_with_asks(order);
         } else {
@@ -77,9 +77,9 @@ impl<OrderType: Order> OrderBook<OrderType> for VecBook<OrderType> {
     }
 
     fn modify(&mut self, order_id: OrderType::OrderId, quantity: OrderType::Quantity) -> bool {
-        if quantity == OrderType::Quantity::default() {
-            return false;
-        }
+        // if quantity == OrderType::Quantity::default() {
+        //     return false;
+        // }
         if let Some(order) = self.bids.iter_mut().find(|order| order.id() == order_id) {
             if order.quantity() <= quantity {
                 return false;

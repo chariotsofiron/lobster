@@ -57,14 +57,15 @@ pub trait OrderBook<OrderType: Order>: Default + FromIterator<OrderType> {
 
     /// Adds a new order to the order book and returns a slice of fills.
     /// Order id should be unique for each new order.
-    /// Orders with zero quantity are not added.
+    ///
+    /// Orders with zero quantity are still added.
     fn add(&mut self, order: OrderType) -> &[Fill<OrderType>];
 
     /// Removes an order by id.
     fn remove(&mut self, order_id: OrderType::OrderId) -> Option<OrderType>;
 
     /// Modifies the quantity of an order by order id.
-    /// Quantity must be non-zero and less than the current order quantity.
+    /// Quantity must be less than the current order quantity.
     /// Returns `true` if the order's quantity was modified.
     fn modify(&mut self, order_id: OrderType::OrderId, quantity: OrderType::Quantity) -> bool;
 }

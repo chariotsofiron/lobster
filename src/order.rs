@@ -5,8 +5,8 @@ use core::ops::Sub;
 /// An order in an order book.
 pub trait Order: Clone {
     type OrderId: Eq + Hash + Clone;
-    type Quantity: Copy + Ord + Default + Sub<Output = Self::Quantity>;
-    type Price: Copy + Ord;
+    type Quantity: Copy + Ord + Sub<Output = Self::Quantity>;
+    type Price: Ord;
 
     fn id(&self) -> Self::OrderId;
     fn quantity(&self) -> Self::Quantity;
@@ -18,6 +18,6 @@ pub trait Order: Clone {
     }
 
     fn price(&self) -> Self::Price;
-    /// Returns true if the order is a buy order, false if it is a sell order.
+    /// Returns `true` if the order is a buy order, `false` if it is a sell order.
     fn is_buy(&self) -> bool;
 }

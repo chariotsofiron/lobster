@@ -34,9 +34,11 @@ mod tests {
     #[test]
     fn order_with_zero_quantity() {
         let mut book = MyBook::default();
-        book.add(MyOrder::sell(0, 2, 5));
-        let fills = book.add(MyOrder::buy(1, 0, 5));
-        assert!(fills.is_empty());
+        let o1 = MyOrder::sell(0, 0, 5);
+        book.add(o1);
+        let fills = book.add(MyOrder::buy(1, 1, 5));
+        assert_eq!(fills, [Fill::Full(o1)]);
+        assert_eq!(book.len(), 1);
     }
 
     #[test]
@@ -181,7 +183,6 @@ mod tests {
     fn test_modify_order() {
         let mut book = MyBook::from_iter([MyOrder::sell(0, 2, 23)]);
 
-        assert_eq!(book.modify(0, 0), false);
         assert_eq!(book.modify(0, 1), true);
         assert_eq!(book.modify(0, 1), false);
     }
